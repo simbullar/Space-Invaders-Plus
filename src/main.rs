@@ -16,9 +16,8 @@ fn main() {
         (WIDTH, HEIGHT),
         "Space Invaders+!!",
         Style::CLOSE,
-        &Default::default(),
-    )
-    .unwrap();
+        &ContextSettings::default(),
+    );
     window.set_vertical_sync_enabled(true);
 
     // all of those are placeholders, in the future i am going to replace this with good images
@@ -70,12 +69,10 @@ fn main() {
         } else if settings_opened {
             // settings screen
         } else {
-            if !is_game_over {
-                // game screen
-            } else {
-                // play again screen
-            }
+            // play again screen
+            // 
         }
+
         window.display();
     }
 }
