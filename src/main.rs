@@ -51,16 +51,52 @@ fn main() {
 
     // ------------------------------------ GAME DEFINITIONS ---------------------------------------
     // player definitions
-    let mut player = RectangleShape::new();
-    player.set_size(Vector2f::new(40.0, 40.0));
+    let ship_texture_default =
+        Texture::from_file("assets/ship.png").expect("Failed to load background texture");
+    let ship_texture_right =
+        Texture::from_file("assets/rightShip.png").expect("Failed to load background texture");
+    let ship_texture_left =
+        Texture::from_file("assets/rightShip.png").expect("Failed to load background texture");
+    let mut ship = Sprite::new();
+    ship.set_texture(&ship_texture_default, false);
+    ship.set_scale(0.1);
 
     //ball definitions
+    let mut position_mouse_temporary = Vector2i::new(0, 0);
+    let ball_indent = 15.0;
+
+    // ball positions
+    let mut current_ball_pos = 0;
+    let ball_position_0 = Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 112.0);
+    let ball_position_1 = Vector2f::new(
+        WIDTH as f32 - 170.0 - ball_indent,
+        HEIGHT as f32 - 110.0 - ball_indent,
+    );
+    let ball_position_2 = Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 105.0 - ball_indent);
+    let ball_position_3 = Vector2f::new(
+        WIDTH as f32 - 170.0 + ball_indent,
+        HEIGHT as f32 - 110.0 - ball_indent,
+    );
+    let ball_position_4 = Vector2f::new(WIDTH as f32 - 170.0 - ball_indent, HEIGHT as f32 - 105.0);
+    let ball_position_5 = Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 105.0);
+    let ball_position_6 = Vector2f::new(WIDTH as f32 - 170.0 + ball_indent, HEIGHT as f32 - 105.0);
+    let ball_position_7 = Vector2f::new(
+        WIDTH as f32 - 170.0 - ball_indent,
+        HEIGHT as f32 - 105.0 + ball_indent,
+    );
+    let ball_position_8 = Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 105.0 + ball_indent);
+    let ball_position_9 = Vector2f::new(
+        WIDTH as f32 - 170.0 + ball_indent,
+        HEIGHT as f32 - 105.0 + ball_indent,
+    );
+
+    let difference_mouse = 50;
     let ball_texture =
         Texture::from_file("assets/ball.png").expect("Failed to load background texture");
     let mut ball = Sprite::new();
     ball.set_texture(&ball_texture, false);
     ball.set_scale(0.3);
-    ball.set_position(Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 112.0));
+    ball.set_position(ball_position_0);
 
     // stand definitions
     let stand_texture =
@@ -116,17 +152,65 @@ fn main() {
 
             // ----------- GAME LOGIC -----------
             if mouse::Button::Left.is_pressed() {
-                // do
-            } else if mouse::Button::Right.is_pressed() {
-                // change to variant
-            } else {
-                // change everything back
-                button.set_texture(&button_off_texture, false);
-            }
+                let mouse_pos = window.mouse_position();
+                if position_mouse_temporary == Vector2i::new(0, 0) {
+                    position_mouse_temporary = mouse_pos;
+                    ball.set_position(ball_position_5);
+                } else {
+                    let dx = mouse_pos.x - position_mouse_temporary.x;
+                    let dy = mouse_pos.y - position_mouse_temporary.y;
 
+                    if dx > difference_mouse {
+                        if dy > difference_mouse {
+                            ball.set_position(ball_position_9);
+                            current_ball_pos = 9;
+                        } else if dy < -difference_mouse {
+                            ball.set_position(ball_position_3);
+                            current_ball_pos = 3;
+                        } else {
+                            ball.set_position(ball_position_6);
+                            current_ball_pos = 6;
+                        }
+                    } else if dx < -difference_mouse {
+                        if dy > difference_mouse {
+                            ball.set_position(ball_position_7);
+                            current_ball_pos = 7;
+                        } else if dy < -difference_mouse {
+                            ball.set_position(ball_position_1);
+                            current_ball_pos = 1;
+                        } else {
+                            ball.set_position(ball_position_4);
+                            current_ball_pos = 4;
+                        }
+                    } else {
+                        if dy > difference_mouse {
+                            ball.set_position(ball_position_8);
+                            current_ball_pos = 8;
+                        } else if dy < -difference_mouse {
+                            ball.set_position(ball_position_2);
+                            current_ball_pos = 2;
+                        } else {
+                            ball.set_position(ball_position_5);
+                            current_ball_pos = 5;
+                        }
+                    }
+                }
+            } else {
+                ball.set_position(ball_position_0);
+                position_mouse_temporary = Vector2i::new(0, 0);
+                current_ball_pos = 0;
+            }
+            /*match current_ball_pos {
+                0 | 5 => (),
+                1 => player.move(),
+                2 => ,
+                3 =>
+                _ => Err(()),
+            }*/
             // Draws for the game screen
             window.draw(&background);
 
+            window.draw(&ship);
             window.draw(&stand);
             window.draw(&ball)
         } else {
