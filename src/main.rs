@@ -2,6 +2,7 @@ extern crate sfml;
 
 use sfml::graphics::*;
 use sfml::system::*;
+use sfml::window::joystick::BUTTON_COUNT;
 use sfml::window::*;
 
 const WIDTH: u32 = 800;
@@ -35,19 +36,27 @@ fn main() {
         Texture::from_file("assets/gameTitle.png").expect("Failed to load background texture");
     let mut game_title = Sprite::new();
     game_title.set_texture(&game_title_texture, false);
-    game_title.set_position(Vector2f::new(130.0, 220.0));
+    game_title.set_origin(Vector2f::new(294.0, 30.0));
+    game_title.set_position(Vector2f::new(WIDTH as f32 / 2.0, 260.0));
+    game_title.set_scale(1.3);
 
     // button_play definitions
-    let mut button_play = RectangleShape::new();
-    button_play.set_size(Vector2f::new(200.0, 50.0));
-    button_play.set_fill_color(Color::rgb(255, 255, 255));
-    button_play.set_position(Vector2f::new(290.0, 350.0));
+    let button_play_off_texture =
+        Texture::from_file("assets/playButtonOff.png").expect("Failed to load background texture");
+    let button_play_on_texture =
+        Texture::from_file("assets/playButtonOn.png").expect("Failed to load background texture");
+    let mut button_play = Sprite::new();
+    button_play.set_texture(&button_play_off_texture, false);
+    button_play.set_origin(Vector2f::new(250.0, 62.5));
+    button_play.set_position(Vector2f::new(WIDTH as f32 / 2.0, 425.0));
 
     //buttonSettings definitions
-    let mut button_settings = RectangleShape::new();
-    button_settings.set_size(Vector2f::new(40.0, 40.0));
-    button_settings.set_fill_color(Color::rgb(255, 255, 255));
-    button_settings.set_position(Vector2f::new(WIDTH as f32 - 40.0, 1.0));
+    let settings_texture =
+        Texture::from_file("assets/gear.png").expect("Failed to load background texture");
+    let mut button_settings = Sprite::new();
+    button_settings.set_texture(&settings_texture, false);
+    button_settings.set_origin(Vector2f::new(24.0, 24.0));
+    button_settings.set_position(Vector2f::new(WIDTH as f32 - 48.0, 48.0));
 
     // ------------------------------------ GAME DEFINITIONS ---------------------------------------
     // player definitions
@@ -90,7 +99,7 @@ fn main() {
         HEIGHT as f32 - 105.0 + ball_indent,
     );
 
-    let difference_mouse = 50;
+    let difference_mouse = 40;
     let ball_texture =
         Texture::from_file("assets/ball.png").expect("Failed to load background texture");
     let mut ball = Sprite::new();
@@ -127,6 +136,7 @@ fn main() {
 
                         if button_play.global_bounds().contains(mouse_pos) {
                             has_game_started = true;
+                            button_play.set_texture(&button_play_off_texture, false);
                         } else if button_settings.global_bounds().contains(mouse_pos) {
                             settings_opened = true;
                         }
@@ -143,6 +153,33 @@ fn main() {
             window.draw(&background);
         } else if !has_game_started {
             // menu
+
+            let desktop_pos = mouse::desktop_position();
+            let window_pos = window.position();
+            let relative =
+                Vector2i::new(desktop_pos.x - window_pos.x, desktop_pos.y - window_pos.y);
+            let mouse_pos = window.map_pixel_to_coords(relative, &window.view());
+
+            if button_play.global_bounds().contains(mouse_pos) {
+                button_play.set_texture(&button_play_on_texture, false);
+                button_play.set_scale(1.13);
+            } else {
+                button_play.set_texture(&button_play_off_texture, false);
+                button_play.set_scale(1.0);
+            }
+
+            if button_settings.global_bounds().contains(mouse_pos) {
+                button_settings.set_scale(1.7);
+                button_settings.rotate(2.0);
+            } else {
+                button_settings.set_scale(1.5);
+            }
+
+            if game_title.global_bounds().contains(mouse_pos) {
+                game_title.set_scale(1.4);
+            } else {
+                game_title.set_scale(1.3);
+            }
             window.draw(&background);
             window.draw(&game_title);
             window.draw(&button_play);
