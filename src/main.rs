@@ -75,7 +75,6 @@ fn main() {
     let ball_indent = 15.0;
 
     // ball positions
-    let mut current_ball_pos = 0;
     let ball_position_0 = Vector2f::new(WIDTH as f32 - 170.0, HEIGHT as f32 - 112.0);
     let ball_position_1 = Vector2f::new(
         WIDTH as f32 - 170.0 - ball_indent,
@@ -118,8 +117,13 @@ fn main() {
     // button definitions
     let button_off_texture =
         Texture::from_file("assets/buttonOff.png").expect("Failed to load background texture");
+    let button_on_texture =
+        Texture::from_file("assets/buttonOn.png").expect("Failed to load background texture");
     let mut button = Sprite::new();
     button.set_texture(&button_off_texture, false);
+    // the buttons are like 16x16 so it will be like 80x80
+    button.set_scale(5.0);
+    button.set_position(Vector2f::new(WIDTH as f32 - 85.0, HEIGHT as f32 - 85.0));
 
     loop {
         // events
@@ -200,56 +204,46 @@ fn main() {
                     if dx > difference_mouse {
                         if dy > difference_mouse {
                             ball.set_position(ball_position_9);
-                            current_ball_pos = 9;
                         } else if dy < -difference_mouse {
                             ball.set_position(ball_position_3);
-                            current_ball_pos = 3;
                         } else {
                             ball.set_position(ball_position_6);
-                            current_ball_pos = 6;
                         }
                     } else if dx < -difference_mouse {
                         if dy > difference_mouse {
                             ball.set_position(ball_position_7);
-                            current_ball_pos = 7;
                         } else if dy < -difference_mouse {
                             ball.set_position(ball_position_1);
-                            current_ball_pos = 1;
                         } else {
                             ball.set_position(ball_position_4);
-                            current_ball_pos = 4;
                         }
                     } else {
                         if dy > difference_mouse {
                             ball.set_position(ball_position_8);
-                            current_ball_pos = 8;
                         } else if dy < -difference_mouse {
                             ball.set_position(ball_position_2);
-                            current_ball_pos = 2;
                         } else {
                             ball.set_position(ball_position_5);
-                            current_ball_pos = 5;
                         }
                     }
                 }
             } else {
                 ball.set_position(ball_position_0);
                 position_mouse_temporary = Vector2i::new(0, 0);
-                current_ball_pos = 0;
             }
-            /*match current_ball_pos {
-                0 | 5 => (),
-                1 => player.move(),
-                2 => ,
-                3 =>
-                _ => Err(()),
-            }*/
+
+            if mouse::Button::Right.is_pressed() {
+                button.set_texture(&button_on_texture, false);
+            } else {
+                button.set_texture(&button_off_texture, false);
+            }
             // Draws for the game screen
             window.draw(&background);
 
             window.draw(&ship);
             window.draw(&stand);
-            window.draw(&ball)
+            window.draw(&ball);
+            window.draw(&button);
         } else {
             // game over
             window.draw(&background);
