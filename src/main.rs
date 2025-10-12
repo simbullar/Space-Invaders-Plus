@@ -47,6 +47,13 @@ impl EnemyType {
             EnemyType::Fast => 1,
         }
     }
+    fn points_gained(&self) -> i32 {
+        match *self {
+            EnemyType::Default => 200,
+            EnemyType::Armored => 400,
+            EnemyType::Fast => 150,
+        }
+    }
 }
 
 struct Projectile<'a> {
@@ -128,6 +135,7 @@ fn spawn_wave<'a>(textures: &HashMap<EnemyType, &'a Texture>, wave_number: u32) 
         let mut sprite = Sprite::new();
         sprite.set_texture(texture, false);
         sprite.set_position(positions[i].value());
+        sprite.set_scale(2.0);
 
         enemies.push(Enemy {
             sprite,
@@ -178,8 +186,6 @@ fn main() {
 
     // ------------------------------------ MAIN MENU DEFINITIONS ------------------------------------
 
-    let mut score: i32 = 0;
-
     let background_texture =
         Texture::from_file("assets/background.png").expect("Failed to load background texture");
     let mut background = Sprite::new();
@@ -190,7 +196,7 @@ fn main() {
         Texture::from_file("assets/gameTitle.png").expect("Failed to load background texture");
     let mut game_title = Sprite::new();
     game_title.set_texture(&game_title_texture, false);
-    game_title.set_origin(Vector2f::new(294.0, 30.0));
+    game_title.set_origin(Vector2f::new(266.0, 30.0));
     game_title.set_position(Vector2f::new(WIDTH as f32 / 2.0, 260.0));
     game_title.set_scale(1.3);
 
@@ -213,6 +219,7 @@ fn main() {
     button_settings.set_position(Vector2f::new(WIDTH as f32 - 48.0, 48.0));
 
     // ------------------------------------ GAME DEFINITIONS ---------------------------------------
+    let mut score: i32 = 0;
     // player definitions
     let ship_texture_default =
         Texture::from_file("assets/ship.png").expect("Failed to load background texture");
@@ -282,6 +289,28 @@ fn main() {
     textures.insert(EnemyType::Fast, &enemy_fast_texture);
     textures.insert(EnemyType::Armored, &enemy_armored_texture);
 
+    let battery_texture_0 = Texture::from_file("assets/battery0.png").unwrap();
+    let battery_texture_1 = Texture::from_file("assets/battery1.png").unwrap();
+    let battery_texture_2 = Texture::from_file("assets/battery2.png").unwrap();
+    let battery_texture_3 = Texture::from_file("assets/battery3.png").unwrap();
+    let battery_texture_4 = Texture::from_file("assets/battery4.png").unwrap();
+    let battery_texture_5 = Texture::from_file("assets/battery5.png").unwrap();
+
+    let mut textures_battery: HashMap<i32, &Texture> = HashMap::new();
+    textures_battery.insert(0, &battery_texture_0);
+    textures_battery.insert(1, &battery_texture_1);
+    textures_battery.insert(2, &battery_texture_2);
+    textures_battery.insert(3, &battery_texture_3);
+    textures_battery.insert(4, &battery_texture_4);
+    textures_battery.insert(5, &battery_texture_5);
+    let mut battery = Sprite::new();
+    battery.set_texture(&battery_texture_0, false);
+    battery.set_scale(3.0);
+    battery.set_position(Vector2f::new(
+        WIDTH as f32 - 64.0 * 3.0 / 2.0,
+        HEIGHT as f32 - 24.0 * 3.0,
+    ));
+
     let mut current_wave = spawn_wave(&textures, wave_number);
     // ----------------------- GAME OVER SCREEEN --------------------
 
@@ -289,10 +318,10 @@ fn main() {
         Texture::from_file("assets/gameOverText.png").expect("Failed to load projectile texture");
     let mut game_over_text = Sprite::new();
     game_over_text.set_texture(&game_over_text_texture, false);
-    game_over_text.set_origin(Vector2f::new(64.0, 64.0));
+    game_over_text.set_origin(Vector2f::new(53.5, 26.0));
     game_over_text.set_position(Vector2f::new(
         WIDTH as f32 / 2.0,
-        HEIGHT as f32 / 2.0 - 50.0,
+        HEIGHT as f32 / 2.0 - 150.0,
     ));
     game_over_text.set_scale(3.0);
 
@@ -303,9 +332,20 @@ fn main() {
     play_again_button.set_origin(Vector2f::new(40.0, 12.0));
     play_again_button.set_position(Vector2f::new(
         WIDTH as f32 / 2.0,
-        HEIGHT as f32 / 2.0 + 150.0,
+        HEIGHT as f32 / 2.0 + 50.0,
     ));
     play_again_button.set_scale(4.0);
+
+    let menu_button_texture =
+        Texture::from_file("assets/menuButton.png").expect("Failed to load projectile texture");
+    let mut menu_button = Sprite::new();
+    menu_button.set_texture(&menu_button_texture, false);
+    menu_button.set_origin(Vector2f::new(32.0, 12.0));
+    menu_button.set_position(Vector2f::new(
+        WIDTH as f32 / 2.0,
+        HEIGHT as f32 / 2.0 + 180.0,
+    ));
+    menu_button.set_scale(4.0);
 
     //
     // =================== MAIN LOOP ====================
@@ -328,6 +368,11 @@ fn main() {
                             if button_play.global_bounds().contains(mouse_pos) {
                                 has_game_started = true;
                                 button_play.set_texture(&button_play_off_texture, false);
+                                wave_number = 0;
+                                is_game_over = false;
+                                bullets_availiable = 5;
+                                ship.set_position(Vector2f::new(200.0, 400.0));
+                                current_wave = spawn_wave(&textures, wave_number);
                             } else if button_settings.global_bounds().contains(mouse_pos) {
                                 settings_opened = true;
                             }
@@ -340,6 +385,9 @@ fn main() {
                                 bullets_availiable = 5;
                                 ship.set_position(Vector2f::new(200.0, 400.0));
                                 current_wave = spawn_wave(&textures, wave_number);
+                            } else if menu_button.global_bounds().contains(mouse_pos) {
+                                has_game_started = false;
+                                is_game_over = false;
                             }
                         }
                     }
@@ -496,6 +544,10 @@ fn main() {
                 pos.y += enemy.speed;
                 pos.x -= enemy.speed;
                 enemy.sprite.set_position(pos);
+                if enemy.health <= 0 {
+                    enemy.alive = false;
+                    score += enemy.enemy_type.points_gained();
+                }
             }
 
             current_wave
@@ -540,11 +592,39 @@ fn main() {
             for projectile in &projectiles {
                 window.draw(&projectile.sprite);
             }
+            battery.set_texture(textures_battery[&(bullets_availiable as i32)], false);
+            window.draw(&battery);
         } else {
             // game over
+            let desktop_pos = mouse::desktop_position();
+            let window_pos = window.position();
+            let relative = Vector2f::new(
+                desktop_pos.x as f32 - window_pos.x as f32,
+                desktop_pos.y as f32 - window_pos.y as f32,
+            );
+
+            if play_again_button.global_bounds().contains(relative) {
+                play_again_button.set_scale(4.5);
+            } else {
+                play_again_button.set_scale(4.0);
+            }
+
+            if menu_button.global_bounds().contains(relative) {
+                menu_button.set_scale(4.5);
+            } else {
+                menu_button.set_scale(4.0);
+            }
+
+            if game_over_text.global_bounds().contains(relative) {
+                game_over_text.set_scale(3.4);
+            } else {
+                game_over_text.set_scale(3.0);
+            }
+
             window.draw(&background);
             window.draw(&game_over_text);
             window.draw(&play_again_button);
+            window.draw(&menu_button);
         }
         window.display();
     }
