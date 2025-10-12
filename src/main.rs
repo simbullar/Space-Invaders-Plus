@@ -5,7 +5,10 @@ use sfml::system::*;
 use sfml::window::joystick::BUTTON_COUNT;
 use sfml::window::*;
 
+use rand::Rng;
+use rand::seq::SliceRandom;
 use sfml::system::Clock;
+use std::collections::HashMap;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -22,16 +25,35 @@ enum ShipFacing {
     Left,
     Right,
 }
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 enum EnemyType {
     Default,
     Armored,
     Fast,
 }
+
+impl EnemyType {
+    fn default_speed(&self) -> f32 {
+        match *self {
+            EnemyType::Default => 1.0,
+            EnemyType::Armored => 0.5,
+            EnemyType::Fast => 2.0,
+        }
+    }
+    fn default_health(&self) -> i32 {
+        match *self {
+            EnemyType::Default => 2,
+            EnemyType::Armored => 4,
+            EnemyType::Fast => 1,
+        }
+    }
+}
+
 struct Projectile<'a> {
     sprite: Sprite<'a>,
     speed: f32,
     direction: i32, // -1 = up, 1 = down
+    damage: i32,
 }
 
 // ENEMY AND WAVES
@@ -41,7 +63,9 @@ struct Enemy<'a> {
     enemy_type: EnemyType,
     alive: bool,
     speed: f32,
+    health: i32,
 }
+
 #[derive(Clone)]
 enum EnemyPositions {
     A1,
@@ -82,31 +106,36 @@ struct Wave<'a> {
     enemies: Vec<Enemy<'a>>,
 }
 
-use rand::seq::SliceRandom;
-
-fn spawn_wave<'a>(texture: &'a Texture, wave_number: u32) -> Wave<'a> {
-    let mut positions: Vec<EnemyPositions> = EnemyPositions::return_in_order().to_vec();
+fn spawn_wave<'a>(textures: &HashMap<EnemyType, &'a Texture>, wave_number: u32) -> Wave<'a> {
     let mut rng = rand::thread_rng();
-    positions.shuffle(&mut rng);
-
-    // Number of enemies per wave increases with wave number
-    let enemy_count = (3 + wave_number as usize).min(positions.len());
-
+    let positions = EnemyPositions::return_in_order();
     let mut enemies = Vec::new();
 
-    for pos_enum in positions.iter().take(enemy_count) {
+    // Spawn more enemies as wave_number increases
+    let enemy_count = (3 + wave_number as usize).min(positions.len());
+
+    for i in 0..enemy_count {
+        // Randomly pick a variant — more fast/tank as wave number increases
+        let variant = if rng.gen_bool(0.2 + 0.1 * wave_number as f64) {
+            EnemyType::Fast
+        } else if rng.gen_bool(0.1 + 0.05 * wave_number as f64) {
+            EnemyType::Armored
+        } else {
+            EnemyType::Default
+        };
+
+        let texture = textures[&variant];
         let mut sprite = Sprite::new();
         sprite.set_texture(texture, false);
-        sprite.set_scale(2.0);
-        sprite.set_position(pos_enum.value());
-        let pos = sprite.position();
+        sprite.set_position(positions[i].value());
 
         enemies.push(Enemy {
             sprite,
-            speed: 0.5 + wave_number as f32 * 0.1, // gradually faster
-            spawn_point: pos,
+            speed: variant.default_speed(),
+            health: variant.default_health(),
+            enemy_type: variant,
             alive: true,
-            enemy_type: EnemyType::Default,
+            spawn_point: positions[i].value(),
         });
     }
 
@@ -129,6 +158,7 @@ fn shoot<'a>(
         sprite: projectile,
         speed,
         direction,
+        damage: 0,
     }
 }
 
@@ -139,7 +169,7 @@ fn main() {
 
     let mut window = RenderWindow::new(
         (WIDTH, HEIGHT),
-        "Space Invaders+!!",
+        "Space Invaders+",
         Style::CLOSE,
         &Default::default(),
     )
@@ -148,8 +178,8 @@ fn main() {
 
     // ------------------------------------ MAIN MENU DEFINITIONS ------------------------------------
 
-    // some of these are placeholders, in the future i am going to replace this with good images
-    // background definitions
+    let mut score: i32 = 0;
+
     let background_texture =
         Texture::from_file("assets/background.png").expect("Failed to load background texture");
     let mut background = Sprite::new();
@@ -195,6 +225,7 @@ fn main() {
     ship.set_texture(&ship_texture_default, false);
     ship.set_scale(2.6);
     let move_speed = 2.5;
+    ship.set_position(Vector2f::new(200.0, 400.0));
 
     //ball definitions
     let ball_indent = 15.0;
@@ -240,12 +271,45 @@ fn main() {
     let mut reload_clock = Clock::start().expect("RESULT");
     let reload_interval = 1.0;
 
-    let enemy_texture =
-        Texture::from_file("assets/enemyDefault.png").expect("Failed to load projectile texture");
+    let enemy_texture = Texture::from_file("assets/enemyDefault.png").unwrap();
+    let enemy_fast_texture = Texture::from_file("assets/enemyFast.png").unwrap();
+    let enemy_armored_texture = Texture::from_file("assets/enemyArmored.png").unwrap();
     let mut enemies: Vec<Enemy> = Vec::new();
 
     let mut wave_number = 0;
-    let mut current_wave = spawn_wave(&enemy_texture, wave_number);
+    let mut textures: HashMap<EnemyType, &Texture> = HashMap::new();
+    textures.insert(EnemyType::Default, &enemy_texture);
+    textures.insert(EnemyType::Fast, &enemy_fast_texture);
+    textures.insert(EnemyType::Armored, &enemy_armored_texture);
+
+    let mut current_wave = spawn_wave(&textures, wave_number);
+    // ----------------------- GAME OVER SCREEEN --------------------
+
+    let game_over_text_texture =
+        Texture::from_file("assets/gameOverText.png").expect("Failed to load projectile texture");
+    let mut game_over_text = Sprite::new();
+    game_over_text.set_texture(&game_over_text_texture, false);
+    game_over_text.set_origin(Vector2f::new(64.0, 64.0));
+    game_over_text.set_position(Vector2f::new(
+        WIDTH as f32 / 2.0,
+        HEIGHT as f32 / 2.0 - 50.0,
+    ));
+    game_over_text.set_scale(3.0);
+
+    let play_again_button_texture = Texture::from_file("assets/buttonPlayAgain.png")
+        .expect("Failed to load projectile texture");
+    let mut play_again_button = Sprite::new();
+    play_again_button.set_texture(&play_again_button_texture, false);
+    play_again_button.set_origin(Vector2f::new(40.0, 12.0));
+    play_again_button.set_position(Vector2f::new(
+        WIDTH as f32 / 2.0,
+        HEIGHT as f32 / 2.0 + 150.0,
+    ));
+    play_again_button.set_scale(4.0);
+
+    //
+    // =================== MAIN LOOP ====================
+    //
 
     loop {
         // events
@@ -256,15 +320,27 @@ fn main() {
                     return;
                 }
                 Event::MouseButtonReleased { button, x, y } => {
-                    if button == mouse::Button::Left && !has_game_started && !settings_opened {
-                        let mouse_pos =
-                            window.map_pixel_to_coords(Vector2i::new(x, y), &window.view());
+                    if button == mouse::Button::Left {
+                        if !has_game_started && !settings_opened {
+                            let mouse_pos =
+                                window.map_pixel_to_coords(Vector2i::new(x, y), &window.view());
 
-                        if button_play.global_bounds().contains(mouse_pos) {
-                            has_game_started = true;
-                            button_play.set_texture(&button_play_off_texture, false);
-                        } else if button_settings.global_bounds().contains(mouse_pos) {
-                            settings_opened = true;
+                            if button_play.global_bounds().contains(mouse_pos) {
+                                has_game_started = true;
+                                button_play.set_texture(&button_play_off_texture, false);
+                            } else if button_settings.global_bounds().contains(mouse_pos) {
+                                settings_opened = true;
+                            }
+                        } else if has_game_started && is_game_over {
+                            let mouse_pos =
+                                window.map_pixel_to_coords(Vector2i::new(x, y), &window.view());
+                            if play_again_button.global_bounds().contains(mouse_pos) {
+                                wave_number = 0;
+                                is_game_over = false;
+                                bullets_availiable = 5;
+                                ship.set_position(Vector2f::new(200.0, 400.0));
+                                current_wave = spawn_wave(&textures, wave_number);
+                            }
                         }
                     }
                 }
@@ -428,10 +504,17 @@ fn main() {
 
             if current_wave.enemies.is_empty() {
                 wave_number += 1;
-                current_wave = spawn_wave(&enemy_texture, wave_number);
+                current_wave = spawn_wave(&textures, wave_number);
             }
 
             for enemy in &current_wave.enemies {
+                if ship
+                    .global_bounds()
+                    .intersection(&enemy.sprite.global_bounds())
+                    != None
+                {
+                    is_game_over = true;
+                }
                 window.draw(&enemy.sprite);
             }
             for projectile in &mut projectiles {
@@ -444,13 +527,15 @@ fn main() {
                     let enemy_bounds: FloatRect = enemy.sprite.global_bounds();
 
                     if proj_bounds.intersection(&enemy_bounds) != None {
-                        enemy.alive = false;
+                        enemy.health -= 1;
+                        projectile.damage += 1;
                     }
                 }
             }
 
-            projectiles
-                .retain(|p| p.sprite.position().x > 0.0 && p.sprite.position().x < WIDTH as f32);
+            projectiles.retain(|p| {
+                p.sprite.position().x > 0.0 && p.sprite.position().x < WIDTH as f32 && p.damage < 2
+            });
 
             for projectile in &projectiles {
                 window.draw(&projectile.sprite);
@@ -458,6 +543,8 @@ fn main() {
         } else {
             // game over
             window.draw(&background);
+            window.draw(&game_over_text);
+            window.draw(&play_again_button);
         }
         window.display();
     }
