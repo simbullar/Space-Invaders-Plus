@@ -12,5 +12,6 @@ This is an isometric-style shooter made for the gamejam hosted by the Segfault c
 1. Install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
 2. Play! 
 ```
-cargo build
+cargo run
 ```
+
