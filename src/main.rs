@@ -211,15 +211,17 @@ fn main() {
     button_play.set_position(Vector2f::new(WIDTH as f32 / 2.0, 425.0));
 
     //buttonSettings definitions
-    let settings_texture =
+    /*let settings_texture =
         Texture::from_file("assets/gear.png").expect("Failed to load background texture");
     let mut button_settings = Sprite::new();
     button_settings.set_texture(&settings_texture, false);
     button_settings.set_origin(Vector2f::new(24.0, 24.0));
-    button_settings.set_position(Vector2f::new(WIDTH as f32 - 48.0, 48.0));
+    button_settings.set_position(Vector2f::new(WIDTH as f32 - 48.0, 48.0));*/
 
     // ------------------------------------ GAME DEFINITIONS ---------------------------------------
     let mut score: i32 = 0;
+
+    let mut temp_changed_ship = false;
     // player definitions
     let ship_texture_default =
         Texture::from_file("assets/ship.png").expect("Failed to load background texture");
@@ -307,7 +309,7 @@ fn main() {
     battery.set_texture(&battery_texture_0, false);
     battery.set_scale(3.0);
     battery.set_position(Vector2f::new(
-        WIDTH as f32 - 64.0 * 3.0 / 2.0,
+        (WIDTH as f32 - 64.0 * 3.0) / 2.0,
         HEIGHT as f32 - 24.0 * 3.0,
     ));
 
@@ -373,9 +375,9 @@ fn main() {
                                 bullets_availiable = 5;
                                 ship.set_position(Vector2f::new(200.0, 400.0));
                                 current_wave = spawn_wave(&textures, wave_number);
-                            } else if button_settings.global_bounds().contains(mouse_pos) {
-                                settings_opened = true;
-                            }
+                            } /*  else if button_settings.global_bounds().contains(mouse_pos) {
+                        settings_opened = true;
+                        } */
                         } else if has_game_started && is_game_over {
                             let mouse_pos =
                                 window.map_pixel_to_coords(Vector2i::new(x, y), &window.view());
@@ -418,12 +420,12 @@ fn main() {
                 button_play.set_scale(1.0);
             }
 
-            if button_settings.global_bounds().contains(mouse_pos) {
+            /*if button_settings.global_bounds().contains(mouse_pos) {
                 button_settings.set_scale(1.7);
                 button_settings.rotate(2.0);
             } else {
                 button_settings.set_scale(1.5);
-            }
+            }*/
 
             if game_title.global_bounds().contains(mouse_pos) {
                 game_title.set_scale(1.4);
@@ -433,7 +435,7 @@ fn main() {
             window.draw(&background);
             window.draw(&game_title);
             window.draw(&button_play);
-            window.draw(&button_settings);
+            /*window.draw(&button_settings);*/
         } else if !is_game_over {
             // game
 
@@ -443,57 +445,59 @@ fn main() {
             if elapsed >= reload_interval {
                 if bullets_availiable < 5 {
                     bullets_availiable += 1;
+                    battery.set_texture(textures_battery[&(bullets_availiable as i32)], false);
                 }
                 reload_clock.restart();
             }
             let mut ship_pos = ship.position();
-            let mut scale = ship.get_scale();
             let mut moved = false;
 
             if Key::D.is_pressed() {
                 ship_pos.x += move_speed;
                 ship_pos.y += move_speed;
                 ship.set_texture(&ship_texture_right, true);
-                scale.x = 2.8;
-                scale.y = 2.8;
+                ship.set_scale(2.8);
                 ball.set_position(ball_position_6);
                 moved = true;
+                temp_changed_ship = true;
             }
 
             if Key::A.is_pressed() {
                 ship_pos.x -= move_speed;
                 ship_pos.y -= move_speed;
                 ship.set_texture(&ship_texture_left, true);
-                scale.x = 2.4;
-                scale.y = 2.4;
+                ship.set_scale(2.4);
                 ball.set_position(ball_position_4);
                 moved = true;
+                temp_changed_ship = true;
             }
 
             if Key::W.is_pressed() {
                 ship_pos.x += move_speed;
                 ship_pos.y -= move_speed;
                 ship.set_texture(&ship_texture_default, true);
-                scale.x = 2.7;
-                scale.y = 2.7;
+                ship.set_scale(2.7);
                 moved = true;
                 ball.set_position(ball_position_2);
+                temp_changed_ship = true;
             }
 
             if Key::S.is_pressed() {
                 ship_pos.x -= move_speed;
                 ship_pos.y += move_speed;
                 ship.set_texture(&ship_texture_default, true);
-                scale.x = 2.5;
-                scale.y = 2.5;
+                ship.set_scale(2.5);
                 moved = true;
                 ball.set_position(ball_position_8);
+                temp_changed_ship = true;
             }
             if !moved {
-                ship.set_texture(&ship_texture_default, true);
-                scale.x = 2.6;
-                scale.y = 2.6;
-                ball.set_position(ball_position_5);
+                if temp_changed_ship {
+                    ship.set_texture(&ship_texture_default, true);
+                    ship.set_scale(2.6);
+                    ball.set_position(ball_position_5);
+                    temp_changed_ship = false;
+                }
             }
 
             if ship_pos.x < BOUNDARY_LEFT {
@@ -510,7 +514,6 @@ fn main() {
             }
 
             ship.set_position(ship_pos);
-            ship.set_scale(scale.x);
 
             if mouse::Button::Right.is_pressed() {
                 button.set_texture(&button_on_texture, false);
@@ -526,6 +529,7 @@ fn main() {
                     ));
                     temp_shot = true;
                     bullets_availiable -= 1;
+                    battery.set_texture(textures_battery[&(bullets_availiable as i32)], false);
                 }
             } else {
                 button.set_texture(&button_off_texture, false);
@@ -592,7 +596,6 @@ fn main() {
             for projectile in &projectiles {
                 window.draw(&projectile.sprite);
             }
-            battery.set_texture(textures_battery[&(bullets_availiable as i32)], false);
             window.draw(&battery);
         } else {
             // game over
