@@ -15,7 +15,9 @@ This is an isometric-style shooter made for the gamejam hosted by the Segfault c
 git clone https://github.com/simbullar/Space-Invaders-Plus && cd Space-Invaders-Plus
 ```
 2. Install [cargo](https://doc.rust-lang.org/cargo/getting-started/installation.html)
-3. Play!
+3. Install [rust-sfml](https://github.com/jeremyletang/rust-sfml) (and tweak the build.rs as needed)
+4. Play!
 ```
 cargo run
 ```
+
